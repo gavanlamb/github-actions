@@ -1,0 +1,67 @@
+﻿name: Merge ref_name branch to base branch
+description: Merge ref_name branch to base branch
+inputs:
+  base-branch-name:
+    description: The name of the base branch
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Get PR details
+      shell: bash
+      id: check-pr-state
+      run: |
+        # Get the PRs that match the base and the head for the current repository
+        PULL_REQUESTS=$(gh pr list \
+          --base ${{ inputs.base-branch-name }} \
+          --head ${{ github.ref_name }} \
+          --json 'id,number,state,url,latestReviews' \
+          --repo '${{ github.repository }}')
+        
+        # Check if there are any PRs
+        PR_COUNT=$(jq -n --argjson pull_requests "$PULL_REQUESTS" '$pull_requests | length')
+        if [ $PR_COUNT -eq 0 ]; then
+          COMMIT_ID=$(git log -1 ${{ github.ref_name }} --pretty=format:"%H")
+          BRANCH=$(git branch -l ${{ inputs.base-branch-name }} --contains $COMMIT_ID)
+          if [ "$BRANCH" == "${{ inputs.base-branch-name }}" ]; then
+            echo "::information::The changes from ${{ github.ref_name }} have already been merged into ${{ inputs.base-branch-name }}"
+            echo "state=merged" >> $GITHUB_OUTPUT
+          else
+            echo "::error::A PR from ${{ github.ref_name }} to ${{ inputs.base-branch-name }} has not been created yet"
+            echo "state=not found" >> $GITHUB_OUTPUT
+          fi
+        else
+          PR_APPROVAL_COUNT=$(jq -n --argjson pull_requests "$PULL_REQUESTS" '[ $pull_requests[] | .latestReviews | .[] | select(.state=="APPROVED")] | length')
+          if [ $PR_APPROVAL_COUNT -eq 0 ]; then
+            echo "::error::Cannot find an approved PR for ${{ github.ref_name }} to ${{ inputs.base-branch-name }}"
+            echo "state=awaiting approval" >> $GITHUB_OUTPUT
+          else
+            echo "state=approved" >> $GITHUB_OUTPUT
+          fi
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Setup git user
+      shell: bash
+      if: ${{ success() && steps.check-pr-state.outputs.state == 'approved' }}
+      run: |
+        git config user.name '${{ github.actor }}'
+        git config user.email '${{ github.actor }}@users.noreply.github.com'
+        git remote set-url origin https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}
+    - name: Checkout ${{ inputs.base-branch-name }}
+      shell: bash
+      if: ${{ success() && steps.check-pr-state.outputs.state == 'approved' }}
+      run: |
+        git fetch --all
+        git checkout ${{ inputs.base-branch-name }}
+    - name: Merge ${{ github.ref_name }} into ${{ inputs.base-branch-name }}
+      shell: bash
+      if: ${{ success() && steps.check-pr-state.outputs.state == 'approved' }}
+      run: |
+        git merge origin/${{ github.ref_name }}
+    - name: Push ${{ inputs.base-branch-name }}
+      shell: bash
+      if: ${{ success() && steps.check-pr-state.outputs.state == 'approved' }}
+      run: |
+        git push origin ${{ inputs.base-branch-name }}
