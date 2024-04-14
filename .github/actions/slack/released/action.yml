@@ -1,0 +1,257 @@
+name: Send slack message for a created pull request
+description: Send slack message for a created pull request
+inputs:
+  environment:
+    description: Environment name to release to
+    required: true
+  include-system-tests:
+    description: Should the system tests be included
+    required: true
+    default: 'true'
+  system-tests-report-url:
+    description: Should the system tests be included
+    required: false
+  system-tests-success-count:
+    description: Should the system tests be included
+    required: false
+  system-tests-success-rate:
+    description: Should the system tests be included
+    required: false
+  system-tests-total-count:
+    description: Should the system tests be included
+    required: false
+  slack-webhook-url:
+    description: Slack webhook url
+    required: true
+  status:
+    description: Slack webhook url
+    required: true
+  version:
+    description: Version of the release
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Build release blocks
+      id: build-release-blocks
+      shell: bash
+      run: |
+        JSON=$(cat <<-END
+          [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": ":rocket: Release - ${{ inputs.environment }} - ${{ github.repository }} - ${{ inputs.version }}",
+                "emoji": true
+              }
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Status: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ inputs.status }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Pipeline Run: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Released By: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ github.actor }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Branch: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ github.head_ref || github.ref_name }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Repository: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ github.repository }}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        END
+        )
+        
+        echo "blocks<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Build system testing blocks
+      if: ${{ inputs.include-system-tests == 'true' }}
+      id: build-system-test-blocks
+      shell: bash
+      run: |
+        JSON=$(cat <<-END
+          [
+            {
+              "type":"divider"
+            },
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": ":gear: System Tests - ${{ github.environment }} - ${{ github.repository }}:${{ inputs.version }}",
+                "emoji": true
+              }
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Success Rate: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ inputs.system-tests-success-rate }}% (${{ inputs.system-tests-success-count }}/${{ inputs.system-tests-total-count }})"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Test Report: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "url": "${{ inputs.system-tests-report-url }}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        END
+        )
+        
+        echo "blocks<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Build message
+      id: build-message
+      shell: bash
+      run: |
+        RELEASE='${{ steps.build-release-blocks.outputs.blocks }}'
+        SYSTEM_TESTS='${{ steps.build-system-test-blocks.outputs.blocks }}' 
+        BLOCKS=$(jq -n --argjson arr1 "$RELEASE" --argjson arr2 "${SYSTEM_TESTS:-[]}" '$arr1 + $arr2')
+        
+        JSON=$(cat <<-END
+          {
+            "blocks": $BLOCKS 
+          }
+        END
+        )
+        
+        echo "message<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    - name: Send message
+      id: slack
+      uses: slackapi/slack-github-action@v1.25.0
+      with:
+        payload: |
+          ${{ steps.build-message.outputs.message }} 
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
