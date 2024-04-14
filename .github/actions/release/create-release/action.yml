@@ -1,0 +1,123 @@
+﻿name: Create release notes
+description: Create release notes
+inputs:
+  files:
+    description: Files to include in the release
+    required: true
+  tag-name:
+    description: The name of the tag
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Does release exist
+      uses: insightsengineering/release-existence-action@v1.0.0
+      id: does-release-exist
+      with:
+        release-tag: ${{ inputs.tag-name }}
+    - name: Create release notes
+      uses: mikepenz/release-changelog-builder-action@v5.0.0-a02
+      id: build-release-notes
+      if: ${{ success() && steps.does-release-exist.outputs.release-exists == 'false' }}
+      with:
+        configurationJson: |
+          {
+            "categories": [
+              {
+                "keys": "bugs",
+                "title": "## 🐛 Bug Fixes",
+                "labels": [
+                  "bug",
+                  "bugfix",
+                  "fix"
+                ]
+              },
+              {
+                "keys": "documentation",
+                "title": "## 📃 Documentation",
+                "labels": [
+                  "docs",
+                  "documentation"
+                ]
+              },
+              {
+                "keys": "features",
+                "title": "## 🎁 Features",
+                "labels": [
+                  "feat",
+                  "feature",
+                  "enhancement"
+                ]
+              },
+              {
+                "keys": "refactor",
+                "title": "## 🔄 Refactor",
+                "labels": [
+                  "refactor"
+                ]
+              },
+              {
+                "keys": "style",
+                "title": "## 🎨 Style",
+                "labels": [
+                  "style"
+                ]
+              },
+              {
+                "keys": "tests",
+                "title": "## 🧪 Tests",
+                "labels": [
+                  "test"
+                ]
+              },
+              {
+                "keys": "maintenance",
+                "title": "## 🛠️ Maintenance",
+                "labels": [
+                  "chore"
+                ]
+              }
+            ],
+            "sort": {
+              "order": "DESC",
+              "on_property": "mergedAt"
+            },
+            "template": "#{{CHANGELOG}}",
+            "pr_template": "- #{{TITLE}}",
+            "empty_template": "- no changes",
+            "label_extractor": [
+              {
+                "pattern": "^([^:]+):(.*)",
+                "on_property": "title",
+                "target": "$1",
+                "flags": "giu"
+              }
+            ],
+            "trim_values": true,
+            "max_back_track_time_days": 365,
+            "exclude_merge_branches": [],
+            "tag_resolver": {
+              "method": "semver"
+            },
+            "ignore_labels": [
+              "merge"
+            ],
+            "base_branches": [
+              "develop",
+              "main",
+              "release",
+              "hotfix"
+            ]
+          }
+        failOnError: false
+        toTag: ${{ github.sha }}
+        token: ${{ github.token }}
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      if: ${{ success() && steps.does-release-exist.outputs.release-exists == 'false' }}
+      with:
+        body: ${{ steps.build-release-notes.outputs.changelog }}
+        tag_name: ${{ inputs.tag-name }}
+        make_latest: true
+        files: ${{ inputs.files }}
