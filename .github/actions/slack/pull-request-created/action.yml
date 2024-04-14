@@ -1,0 +1,151 @@
+name: Send slack message for a created pull request
+description: Send slack message for a created pull request
+inputs:
+  slack-webhook-url:
+    description: Slack webhook url
+    required: true
+  title:
+    description: The PR title
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Build pull request blocks
+      id: build-pull-request-blocks
+      shell: bash
+      run: |
+        TITLE=$(cut -c 1-150 <<< ":twisted_rightwards_arrows: Pull Request - ${{ inputs.title }}")
+        JSON=$(cat <<-END
+          [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": "$TITLE",
+                "emoji": true
+              }
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Pull Request: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "url": "${{ github.event.pull_request.html_url }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Raised By: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ github.actor }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Branches: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ github.head_ref }} "
+                    },
+                    {
+                      "type": "emoji",
+                      "name": "arrow_right"
+                    },
+                    {
+                      "type": "text",
+                      "text": " ${{ github.base_ref }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Repository: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ github.repository }}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        END
+        )
+        
+        echo "blocks<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Build message
+      id: build-message
+      shell: bash
+      run: |
+        JSON=$(cat <<-END
+          {
+            "blocks": ${{ steps.build-pull-request-blocks.outputs.blocks }} 
+          }
+        END
+        )
+        
+        echo "message<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    - name: Send message
+      id: slack
+      uses: slackapi/slack-github-action@v1.25.0
+      with:
+        payload: |
+          ${{ steps.build-message.outputs.message }} 
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
