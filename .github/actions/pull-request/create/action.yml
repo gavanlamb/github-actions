@@ -1,0 +1,24 @@
+﻿name: Send slack message for a build
+description: Send slack message for a build
+inputs:
+  base-branch-name:
+    description: The name of the base branch
+    required: true
+  head-branch-name:
+    description: The name of the head branch
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Open PR
+      shell: bash
+      run: |
+        PR_COUNT=$(gh pr list --base '${{ inputs.base-branch-name }}' --head '${{ inputs.head-branch-name }}' --json 'state' --jq '[ .[] | select(.state=="OPEN") ] | length' --repo '${{ github.repository }}')
+        if [ $PR_COUNT -eq 0 ]; then
+          gh pr create --base '${{ inputs.base-branch-name }}' --head '${{ inputs.head-branch-name }}' --title 'merge:${{ inputs.head-branch-name }} to ${{ inputs.base-branch-name }}' --body 'merge:${{ inputs.head-branch-name }} to ${{ inputs.base-branch-name }}' --repo '${{ github.repository }}' || echo "Pull request from ${{ inputs.head-branch-name }} to ${{ inputs.base-branch-name }} is not needed"
+        else
+          echo '::warning:: A PR from ${{ inputs.head-branch-name }} to ${{ inputs.base-branch-name }} already exists'
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
