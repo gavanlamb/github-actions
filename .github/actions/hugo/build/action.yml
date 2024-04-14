@@ -1,0 +1,71 @@
+name: Build Hugo site
+description: Build and tar Hugo site and create version badges
+inputs:
+  artifact-name:
+    description: Name of the artifact to create containing the built site. If not specified, no artifact will be created.
+    required: false
+  commit-by:
+    description: Commit by
+    required: true
+  commit-date:
+    description: Commit date
+    required: true
+  commit-id:
+    description: Commit Id
+    required: true
+  destination-directory:
+    description: Directory to place the built site in, relative to the source directory.
+    required: true
+    default: site
+  source-directory:
+    description: Directory containing the Hugo project.
+    required: true
+    default: docs
+  version:
+    description: Version.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Setup Hugo
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: '0.123.7'
+        extended: true
+    - name: Build Hugo
+      shell: bash
+      run: hugo --source ${{ inputs.source-directory }} --destination ${{ inputs.destination-directory }}
+    - name: Generate version file
+      shell: bash
+      run: |
+        JSON_STRING=$(jq -n \
+          --arg commit-by "${{ inputs.commit-by }}" \
+          --arg commit-date "${{ inputs.commit-date }}" \
+          --arg commit-id "${{ inputs.commit-id }}" \
+          --arg version "${{ inputs.version }}" \
+          '$ARGS.named')
+        
+        echo "$JSON_STRING" | jq . > "${{ inputs.source-directory }}/${{ inputs.destination-directory }}/version.json"
+    - name: Create directories
+      shell: bash
+      run: |
+        mkdir -p ${{ inputs.source-directory }}/${{ inputs.destination-directory }}/badges
+    - name: Create badge for site version
+      uses: emibcn/badge-action@v2.0.2
+      with:
+        label: Site version
+        status: ${{ inputs.version }}
+        path: ${{ inputs.source-directory }}/${{ inputs.destination-directory }}/badges/version.svg
+    - name: Archive ${{ inputs.artifact-name }}
+      shell: bash
+      if: ${{ success() && inputs.artifact-name }}
+      run: |
+        SOURCE="${{ inputs.source-directory }}/${{ inputs.destination-directory }}"
+        DESTINATION_FILE="${{ inputs.source-directory }}/artifact.tar"
+        tar --dereference --hard-dereference --directory "$SOURCE" -cvf "$DESTINATION_FILE" --exclude=.git --exclude=.github .
+    - name: Upload ${{ inputs.artifact-name }} artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.source-directory }}/artifact.tar
+        overwrite: false
