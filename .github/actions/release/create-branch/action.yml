@@ -1,0 +1,56 @@
+﻿name: Create a release
+description: Create a release branch and update the source branch with updated version information
+inputs:
+  branch-type:
+    description: The type of branch to create(hotfix or release)
+    required: false
+    default: 'release'
+outputs:
+  branch-name:
+    description: "Branch name"
+    value: ${{ steps.create-branch-name.outputs.branch-name }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup git user
+      shell: bash
+      run: |
+        git config user.name '${{ github.actor }}'
+        git config user.email '${{ github.actor }}@users.noreply.github.com'
+        git remote set-url origin https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}
+    - name: Prepare release branch
+      id: create-branch-name
+      shell: bash
+      run: |
+        BRANCH_NAME="${{ inputs.branch-type }}"
+        echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+    - name: Check if ${{ steps.create-branch-name.outputs.branch-name }} branch exists
+      id: does-branch-exist
+      shell: bash
+      run: |
+        if [ $(git branch -l "${{ steps.create-branch-name.outputs.branch-name }}") ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+    - name: Prepare ${{ steps.create-branch-name.outputs.branch-name }}
+      if: ${{ success() && steps.does-branch-exist.outputs.exists == 'true' }}
+      shell: bash
+      run: |
+        echo '::warning:: Branch:${{ steps.create-branch-name.outputs.branch-name }} exists. Skipping release branch creation.'
+    - name: Create ${{ steps.create-branch-name.outputs.branch-name }} branch 
+      id: create-branch
+      if: ${{ success() && steps.does-branch-exist.outputs.exists == 'false' }}
+      shell: bash
+      run: |
+        git checkout -b ${{ steps.create-branch-name.outputs.branch-name }}
+    - name: Push ${{ steps.create-branch-name.outputs.branch-name }}
+      shell: bash
+      if: ${{ success() && steps.does-branch-exist.outputs.exists == 'false' }}
+      run: |
+        git push origin ${{ steps.create-branch-name.outputs.branch-name }}
+
+
+#Still using the develop branch to calculate the version number. This is not ideal
+#always revert to the branch that triggered the flow
