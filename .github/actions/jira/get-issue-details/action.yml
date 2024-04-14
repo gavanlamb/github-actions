@@ -1,0 +1,52 @@
+﻿name: Get jira issue details
+description: Get jira issue details
+inputs:
+  base-url:
+    description: The base url of the jira instance. Do not include a trailing /
+    required: true
+  user-email:
+    description: The email of the user
+    required: true
+  api-token:
+    description: The api token of the user
+    required: true
+outputs:
+  identifier:
+    description: Identifier of the issue
+    value: ${{ steps.get-jira-identifier.outputs.issue-number }}
+  title:
+    description: Title of the issue
+    value: ${{ steps.get-issue-details.outputs.title }}
+  type:
+    description: Type of the issue
+    value: ${{ steps.get-issue-details.outputs.type_name }}
+  url:
+    description: URL of the
+    value: ${{ inputs.base-url }}/browse/${{ steps.get-jira-identifier.outputs.issue-number }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get identifier
+      shell: bash
+      id: get-jira-identifier
+      run: |
+        BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+        if [[ $BRANCH_NAME =~ ^([^/]+)/([A-Za-z]+-[0-9]+)-.*$ ]]; then
+          echo "issue-number=${BASH_REMATCH[2]}" >> $GITHUB_OUTPUT
+        else
+          echo "issue-number=" >> $GITHUB_OUTPUT
+        fi
+    - name: Login
+      uses: atlassian/gajira-login@master
+      if: ${{ steps.get-jira-identifier.outputs.issue-number }}
+      env:
+        JIRA_BASE_URL: ${{ inputs.base-url }}/
+        JIRA_USER_EMAIL: ${{ inputs.user-email }}
+        JIRA_API_TOKEN: ${{ inputs.api-token }}
+    - name: Get details
+      uses: byunguk/jira-issue-details@main
+      id: get-issue-details
+      if: ${{ steps.get-jira-identifier.outputs.issue-number }}
+      with:
+        issue: ${{ steps.get-jira-identifier.outputs.issue-number }}
