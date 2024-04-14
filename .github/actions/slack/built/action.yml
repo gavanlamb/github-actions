@@ -1,0 +1,339 @@
+﻿name: Send slack message for a build
+description: Send slack message for a build
+inputs:
+  include-integration-tests:
+    description: Should the integration tests be included
+    required: false
+    default: 'true'
+  integration-tests-report-url:
+    description: Url to the integration tests report
+    required: false
+  integration-tests-success-rate:
+    description: Integration tests success rate 0 - 100
+    required: false
+  integration-tests-success-count:
+    description: Number of integration tests that passed
+    required: false
+  integration-tests-total-count:
+    description: Total number of integration tests that passed
+    required: false
+  include-unit-tests:
+    description: Should the unit tests be included
+    required: false
+    default: 'true'
+  unit-tests-report-url:
+    description: Url to the unit tests report
+    required: false
+  unit-tests-success-rate:
+    description: Unit tests success rate 0 - 100
+    required: false
+  unit-tests-success-count:
+    description: Number of unit tests that passed
+    required: false
+  unit-tests-total-count:
+    description: Total number of unit tests that passed
+    required: false
+  status:
+    description: Slack webhook url
+    required: true
+  slack-webhook-url:
+    description: Slack webhook url
+    required: true
+  version:
+    description: Version of the build
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Build build blocks
+      id: build-build-blocks
+      shell: bash
+      run: |
+        JSON=$(cat <<-END
+          [
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": ":hammer: Build - ${{ github.repository }} - ${{ inputs.version }}",
+                "emoji": true
+              }
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Status: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ inputs.status }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Pipeline Run: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Branch: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ github.head_ref || github.ref_name }}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        END
+        )
+        
+        echo "blocks<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Build integration tests blocks
+      if: ${{ inputs.include-integration-tests == 'true' }}
+      id: build-integration-tests-blocks
+      shell: bash
+      run: |
+        JSON=$(cat <<-END
+          [
+            {
+              "type":"divider"
+            },
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": ":jigsaw: Integration Tests",
+                "emoji": true
+              }
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Success Rate: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ inputs.integration-tests-success-rate }}% (${{ inputs.integration-tests-success-count }}/${{ inputs.integration-tests-total-count }})"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Test Report: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "url": "${{ inputs.integration-tests-report-url }}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        END
+        )
+        
+        echo "blocks<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Build unit tests blocks
+      if: ${{ inputs.include-unit-tests == 'true' }}
+      id: build-unit-tests-blocks
+      shell: bash
+      run: |
+        JSON=$(cat <<-END
+          [
+            {
+              "type":"divider"
+            },
+            {
+              "type": "header",
+              "text": {
+                "type": "plain_text",
+                "text": ":test_tube: Unit Tests",
+                "emoji": true
+              }
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Success Rate: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ inputs.unit-tests-success-rate }}% (${{ inputs.unit-tests-success-count }}/${{ inputs.unit-tests-total-count }})"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Test Report: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "url": "${{ inputs.unit-tests-report-url }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Code Coverage Rate: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "text": "${{ inputs.codeCoverageRate }}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rich_text",
+              "elements": [
+                {
+                  "type": "rich_text_section",
+                  "elements": [
+                    {
+                      "type": "text",
+                      "text": "Code Coverage Report: ",
+                      "style": {
+                        "bold": true
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "url": "${{ inputs.codeCoverageReportUrl }}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        END
+        )
+        
+        echo "blocks<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Build message
+      id: build-message
+      shell: bash
+      run: |
+        BUILD='${{ steps.build-build-blocks.outputs.blocks }}'
+        INTEGRATION_TESTS='${{ steps.build-integration-tests-blocks.outputs.blocks }}' 
+        UNIT_TESTS='${{ steps.build-unit-tests-blocks.outputs.blocks }}'
+        BLOCKS=$(jq -n --argjson arr1 "$BUILD" --argjson arr2 "${INTEGRATION_TESTS:-[]}" --argjson arr3 "${UNIT_TESTS:-[]}" '$arr1 + $arr2 + $arr3')
+
+        JSON=$(cat <<-END
+          {
+            "blocks": $BLOCKS 
+          }
+        END
+        )
+
+        echo "message<<EOF" >> $GITHUB_OUTPUT
+        echo "$JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    - name: Send message
+      id: slack
+      uses: slackapi/slack-github-action@v1.25.0
+      with:
+        payload: |
+          ${{ steps.build-message.outputs.message }} 
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
