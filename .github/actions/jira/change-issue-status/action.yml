@@ -1,0 +1,40 @@
+﻿name: Get jira issue details
+description: Get jira issue details
+inputs:
+  base-url:
+    description: The base url of the jira instance. Do not include a trailing /
+    required: true
+  user-email:
+    description: The email of the user
+    required: true
+  api-token:
+    description: The api token of the user
+    required: true
+  identifier:
+    description: The issue id
+    required: true
+  status:
+    description: The status to transition the issue to
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Output validation messages
+      if: ${{ inputs.identifier == '' }}
+      shell: bash
+      run: echo "No issue identifier found. Skipping status change."
+    - name: Login
+      uses: atlassian/gajira-login@master
+      if: ${{ inputs.identifier }}
+      env:
+        JIRA_BASE_URL: ${{ inputs.base-url }}/
+        JIRA_USER_EMAIL: ${{ inputs.user-email }}
+        JIRA_API_TOKEN: ${{ inputs.api-token }}
+    - name: Transition issue to ${{ inputs.status }} 
+      uses: atlassian/gajira-transition@master
+      if: ${{ inputs.identifier }}
+      with:
+        issue: ${{ inputs.identifier }}
+        transition: ${{ inputs.status }}
+    
