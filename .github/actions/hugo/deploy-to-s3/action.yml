@@ -1,0 +1,53 @@
+﻿name: Publish website to S3
+description: Pull artifact that's a .tar, unpack and publish to S3
+inputs:
+  artifact-name:
+    description: Name of the artifact to download
+    required: false
+  artifact-directory:
+    description: Directory to place the downloaded artifact
+    required: true
+    default: site
+  aws-access-key-id:
+    description: Name of the S3 bucket to upload to
+    required: false
+  aws-secret-access-key:
+    description: Name of the S3 bucket to upload to
+    required: false
+  aws-s3-bucket:
+    description: Name of the S3 bucket to upload to
+    required: false
+  aws-s3-path:
+    description: Path in the S3 bucket to upload the site to
+    required: false
+  aws-s3-region:
+    description: Path in the S3 bucket to upload the site to
+    required: false
+runs:
+  using: composite
+  steps:
+    - name: Download ${{ inputs.artifact-name }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ./${{ inputs.artifact-directory }}
+    - name: Extract tar file
+      uses: a7ul/tar-action@v1.1.0
+      with:
+        command: x 
+        cwd: ./${{ inputs.artifact-directory }}
+        files: ./${{ inputs.artifact-directory }}/artifact.tar
+    - name: Remove tar file
+      shell: bash
+      run: rm -rf ./${{ inputs.artifact-directory }}/artifact.tar
+    - uses: jakejarvis/s3-sync-action@master
+      name: Deploy ${{ inputs.artifact-name }} to S3
+      with:
+        args: --acl public-read --delete
+      env:
+        AWS_S3_BUCKET: ${{ inputs.aws-s3-bucket }}
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        AWS_REGION: ${{ inputs.aws-s3-region }}
+        SOURCE_DIR: ${{ inputs.artifact-directory }}
+        DEST_DIR: ${{ inputs.aws-s3-path }}
