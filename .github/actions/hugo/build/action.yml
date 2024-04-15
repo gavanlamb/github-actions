@@ -32,6 +32,13 @@ runs:
       with:
         hugo-version: '0.123.7'
         extended: true
+    - name: Install NPM packages
+      shell: bash
+      run: |
+        npm install -D autoprefixer
+        npm install -D postcss-cli
+        npm install -D postcss
+      working-directory: ${{ inputs.source-directory }}
     - name: Build Hugo
       shell: bash
       run: hugo --source ${{ inputs.source-directory }} --destination ${{ inputs.destination-directory }}
