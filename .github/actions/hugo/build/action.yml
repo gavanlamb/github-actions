@@ -27,20 +27,34 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Check if package-lock.json exists
+      id: check-path
+      shell: bash
+      run: |
+        if [ -e "package-lock.json" ]; then
+          echo "Path exists, running step..."
+          echo "::set-output name=path_exists::true"
+        else
+          echo "Path does not exist, skipping step..."
+          echo "::set-output name=path_exists::false"
+        fi
+      working-directory: ${{ inputs.source-directory }}
+    - name: Install node
+      if: steps.check-path.outputs.path_exists == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    - name: Install NPM packages
+      if: steps.check-path.outputs.path_exists == 'true'
+      shell: bash
+      run: |
+        npm ci
+      working-directory: ${{ inputs.source-directory }}
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: '0.124.1'
         extended: true
-    - name: Install NPM packages
-      shell: bash
-      run: |
-        npm install -D npx
-        npm install -D autoprefixer
-        npm install -D postcss-cli
-        npm install -D postcss
-        ls -al
-      working-directory: ${{ inputs.source-directory }}
     - name: Build Hugo
       shell: bash
       run: hugo --source ${{ inputs.source-directory }} --destination ${{ inputs.destination-directory }}
