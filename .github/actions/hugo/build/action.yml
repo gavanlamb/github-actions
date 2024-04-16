@@ -35,9 +35,11 @@ runs:
     - name: Install NPM packages
       shell: bash
       run: |
+        npm install -D npx
         npm install -D autoprefixer
         npm install -D postcss-cli
         npm install -D postcss
+        ls -al
       working-directory: ${{ inputs.source-directory }}
     - name: Build Hugo
       shell: bash
