@@ -1,0 +1,39 @@
+name: Build Hugo site
+description: Build and tar Hugo site and create version badges
+inputs:
+  artifact-name:
+    description: Name of the artifact to create containing the built site. If not specified, no artifact will be created.
+    required: false
+  source-directory:
+    description: Directory to tar.
+    required: true
+    default: site
+  destination-directory:
+    description: Directory to tar.
+    required: true
+    default: site
+outputs:
+  destination-directory:
+    description: "Directory where the site was built."
+    value: ${{ steps.build.outputs.destination-directory }}
+  tar-name:
+    description: "Directory where the site was built."
+    value: ${{ steps.build.outputs.tar-name }}
+runs:
+  using: composite
+  steps:
+    - name: Archive ${{ inputs.artifact-name }}
+      shell: bash
+      id: archive
+      run: |
+        TAR_NAME="artifact.tar"
+        DESTINATION_FILE="${{ inputs.destination-directory }}/$TAR_NAME"
+        tar --dereference --hard-dereference --directory "${{ inputs.source-directory }}" -cvf "$DESTINATION_FILE" --exclude=.git --exclude=.github .
+        echo "tar-path=$DESTINATION_FILE" >> $GITHUB_OUTPUT
+        echo "tar-name=$TAR_NAME" >> $GITHUB_OUTPUT
+    - name: Upload ${{ inputs.artifact-name }} artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.archive.outputs.tar-path }}]
+        overwrite: false
