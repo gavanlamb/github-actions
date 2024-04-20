@@ -38,103 +38,103 @@ inputs:
     default: 'true'
 outputs:
   assembly-sem-ver:
-    description: "Assembly semantic version"
+    description: Assembly semantic version
     value: ${{ steps.get-version.outputs.assemblySemVer }}
   assembly-sem-file-ver:
-    description: "Assembly semantic file version"
+    description: Assembly semantic file version
     value: ${{ steps.get-version.outputs.assemblySemFileVer }}
   branch-name:
-    description: "Branch name"
+    description: Branch name
     value: ${{ steps.get-version.outputs.branchName }}
   build-meta-data:
-    description: "Build metadata"
+    description: Build metadata
     value: ${{ steps.get-version.outputs.buildMetaData }}
   build-meta-data-padded:
-    description: "Build metadata padded"
+    description: Build metadata padded
     value: ${{ steps.get-version.outputs.buildMetaDataPadded }}
   commit-date:
-    description: "Commit date"
+    description: Commit date
     value: ${{ steps.get-version.outputs.commitDate }}
   commits-since-version-source:
-    description: "Commits since version source"
+    description: Commits since version source
     value: ${{ steps.get-version.outputs.commitsSinceVersionSource }}
   commits-since-version-source-padded:
-    description: "Commits since version source padded"
+    description: Commits since version source padded
     value: ${{ steps.get-version.outputs.commitsSinceVersionSourcePadded }}
   escaped-branch-name:
-    description: "Escaped branch name"
+    description: Escaped branch name
     value: ${{ steps.get-version.outputs.escapedBranchName }}
   full-build-meta-data:
-    description: "Full build metadata"
+    description: Full build metadata
     value: ${{ steps.get-version.outputs.fullBuildMetaData }}
   full-sem-ver:
-    description: "Full semantic version"
+    description: Full semantic version
     value: ${{ steps.get-version.outputs.fullSemVer }}
   informational-version:
-    description: "Informational version"
+    description: Informational version
     value: ${{ steps.get-version.outputs.informationalVersion }}
   legacy-sem-ver:
-    description: "Legacy semantic version"
+    description: Legacy semantic version
     value: ${{ steps.get-version.outputs.legacySemVer }}
   legacy-sem-ver-padded:
-    description: "Legacy semantic version padded"
+    description: Legacy semantic version padded
     value: ${{ steps.get-version.outputs.legacySemVerPadded }}
   major: 
-    description: "Major version"
+    description: Major version
     value: ${{ steps.get-version.outputs.major }}
   minor:
-    description: "Minor version"
+    description: Minor version
     value: ${{ steps.get-version.outputs.minor }}
   major-minor-patch:
-    description: "Major minor patch"
+    description: Major minor patch
     value: ${{ steps.get-version.outputs.majorMinorPatch }}
   nuget-pre-release-tag:
-    description: "NuGet pre-release tag"
+    description: NuGet pre-release tag
     value: ${{ steps.get-version.outputs.nuGetPreReleaseTag }}
   nuget-pre-release-tag-v2:
-    description: "NuGet pre-release tag v2"
+    description: NuGet pre-release tag v2
     value: ${{ steps.get-version.outputs.nuGetPreReleaseTagV2 }}
   nuget-version:
-    description: "NuGet version"
+    description: NuGet version
     value: ${{ steps.get-version.outputs.nuGetVersion }}
   nuget-version-v2:
-    description: "NuGet version v2"
+    description: NuGet version v2
     value: ${{ steps.get-version.outputs.nuGetVersionV2 }}
   patch:
-    description: "Patch version"
+    description: Patch version
     value: ${{ steps.get-version.outputs.patch }}
   pre-release-label:
-    description: "Pre-release label"
+    description: Pre-release label
     value: ${{ steps.get-version.outputs.preReleaseLabel }}
   pre-release-label-with-dash:
-    description: "Pre-release label with dash"
+    description: Pre-release label with dash
     value: ${{ steps.get-version.outputs.preReleaseLabelWithDash }}
   pre-release-number:
-    description: "Pre-release number"
+    description: Pre-release number
     value: ${{ steps.get-version.outputs.preReleaseNumber }}
   pre-release-tag:
-    description: "Pre-release tag"
+    description: Pre-release tag
     value: ${{ steps.get-version.outputs.preReleaseTag }}
   pre-release-tag-with-dash:
-    description: "Pre-release tag with dash"
+    description: Pre-release tag with dash
     value: ${{ steps.get-version.outputs.preReleaseTagWithDash }}
   sem-ver:
-    description: "Semantic version"
+    description: Semantic version
     value: ${{ steps.get-version.outputs.semVer }}
   sha:
-    description: "SHA"
+    description: SHA
     value: ${{ steps.get-version.outputs.sha }}
   short-sha:
-    description: "Short SHA"
+    description: Short SHA
     value: ${{ steps.get-version.outputs.shortSha }}
   uncommitted-changes:
-    description: "Uncommitted changes"
+    description: Uncommitted changes
     value: ${{ steps.get-version.outputs.uncommittedChanges }}
   version-source-sha:
-    description: "Version source SHA"
+    description: Version source SHA
     value: ${{ steps.get-version.outputs.versionSourceSha }}
   weighted-pre-release-number:
-    description: "Weighted pre-release number"
+    description: Weighted pre-release number
     value: ${{ steps.get-version.outputs.weightedPreReleaseNumber }}
 runs:
   using: composite

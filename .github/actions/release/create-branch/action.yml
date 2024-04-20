@@ -7,7 +7,7 @@ inputs:
     default: 'release'
 outputs:
   branch-name:
-    description: "Branch name"
+    description: Branch name
     value: ${{ steps.create-branch-name.outputs.branch-name }}
 
 runs:
