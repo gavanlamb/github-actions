@@ -13,11 +13,8 @@ inputs:
     required: true
     default: site
 outputs:
-  destination-directory:
-    description: "Directory where the site was built."
-    value: ${{ steps.build.outputs.destination-directory }}
   tar-name:
-    description: "Directory where the site was built."
+    description: Directory where the site was built.
     value: ${{ steps.build.outputs.tar-name }}
 runs:
   using: composite
