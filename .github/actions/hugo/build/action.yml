@@ -1,9 +1,6 @@
 name: Build Hugo site
 description: Build and tar Hugo site and create version badges
 inputs:
-  artifact-name:
-    description: Name of the artifact to create containing the built site. If not specified, no artifact will be created.
-    required: false
   commit-by:
     description: Commit by
     required: true
@@ -24,32 +21,13 @@ inputs:
   version:
     description: Version.
     required: true
+outputs:
+  destination-directory:
+    description: "Directory where the site was built."
+    value: ${{ steps.build.outputs.destination-directory }}
 runs:
   using: composite
   steps:
-    - name: Check if package-lock.json exists
-      id: check-path
-      shell: bash
-      run: |
-        if [ -e "package-lock.json" ]; then
-          echo "Path exists, running step..."
-          echo "::set-output name=path_exists::true"
-        else
-          echo "Path does not exist, skipping step..."
-          echo "::set-output name=path_exists::false"
-        fi
-      working-directory: ${{ inputs.source-directory }}
-    - name: Install node
-      if: steps.check-path.outputs.path_exists == 'true'
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-    - name: Install NPM packages
-      if: steps.check-path.outputs.path_exists == 'true'
-      shell: bash
-      run: |
-        npm ci
-      working-directory: ${{ inputs.source-directory }}
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
@@ -57,7 +35,11 @@ runs:
         extended: true
     - name: Build Hugo
       shell: bash
-      run: hugo --source ${{ inputs.source-directory }} --destination ${{ inputs.destination-directory }}
+      id: build
+      run: |
+        hugo --source ${{ inputs.source-directory }} --destination ${{ inputs.destination-directory }}
+        echo "destination-directory=${{ inputs.source-directory }}/${{ inputs.destination-directory }}" >> $GITHUB_OUTPUT
+
     - name: Generate version file
       shell: bash
       run: |
@@ -68,27 +50,14 @@ runs:
           --arg version "${{ inputs.version }}" \
           '$ARGS.named')
         
-        echo "$JSON_STRING" | jq . > "${{ inputs.source-directory }}/${{ inputs.destination-directory }}/version.json"
+        echo "$JSON_STRING" | jq . > "${{ steps.build.outputs.destination-directory }}/version.json"
     - name: Create directories
       shell: bash
       run: |
-        mkdir -p ${{ inputs.source-directory }}/${{ inputs.destination-directory }}/badges
+        mkdir -p ${{ steps.build.outputs.destination-directory }}/badges
     - name: Create badge for site version
       uses: emibcn/badge-action@v2.0.2
       with:
         label: Site version
         status: ${{ inputs.version }}
-        path: ${{ inputs.source-directory }}/${{ inputs.destination-directory }}/badges/version.svg
-    - name: Archive ${{ inputs.artifact-name }}
-      shell: bash
-      if: ${{ success() && inputs.artifact-name }}
-      run: |
-        SOURCE="${{ inputs.source-directory }}/${{ inputs.destination-directory }}"
-        DESTINATION_FILE="${{ inputs.source-directory }}/artifact.tar"
-        tar --dereference --hard-dereference --directory "$SOURCE" -cvf "$DESTINATION_FILE" --exclude=.git --exclude=.github .
-    - name: Upload ${{ inputs.artifact-name }} artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ inputs.artifact-name }}
-        path: ${{ inputs.source-directory }}/artifact.tar
-        overwrite: false
+        path: ${{ steps.build.outputs.destination-directory }}/badges/version.svg
